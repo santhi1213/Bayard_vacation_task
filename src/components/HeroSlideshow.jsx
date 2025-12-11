@@ -5,116 +5,86 @@ import '../styles/HeroSlideshow.css';
 const HeroSlideshow = ({ destinations, activeSlide, setActiveSlide }) => {
   const [progress, setProgress] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [scrollDirection, setScrollDirection] = useState(null);
   const totalSlides = destinations.length;
-  const scrollCooldown = useRef(false);
+  const scrollTimeout = useRef(null);
   const containerRef = useRef(null);
 
   // Handle wheel scroll for slide navigation
   useEffect(() => {
     const handleWheel = (e) => {
-      // Prevent default page scrolling
+      // Prevent default scrolling behavior
       e.preventDefault();
-      e.stopPropagation();
       
-      if (scrollCooldown.current) return;
+      if (isScrolling) return;
       
       setIsScrolling(true);
-      scrollCooldown.current = true;
       
       if (e.deltaY > 0) {
         // Scroll down - next slide
-        setScrollDirection('down');
-        setActiveSlide((prev) => {
-          const next = (prev + 1) % totalSlides;
-          return next;
-        });
+        setActiveSlide((prev) => (prev + 1) % totalSlides);
       } else {
         // Scroll up - previous slide
-        setScrollDirection('up');
-        setActiveSlide((prev) => {
-          const prevSlide = (prev - 1 + totalSlides) % totalSlides;
-          return prevSlide;
-        });
+        setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
       }
       
       // Reset progress when manually changing slides
       setProgress(0);
       
-      // Cooldown to prevent rapid scrolling
-      setTimeout(() => {
-        scrollCooldown.current = false;
+      // Debounce to prevent rapid scrolling
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      scrollTimeout.current = setTimeout(() => {
         setIsScrolling(false);
-        setScrollDirection(null);
       }, 800);
     };
 
     // Handle touch events for mobile
-    let touchStartY = 0;
-    
     const handleTouchStart = (e) => {
-      touchStartY = e.touches[0].clientY;
-    };
-    
-    const handleTouchMove = (e) => {
-      e.preventDefault(); // Prevent page scrolling on mobile
-    };
-    
-    const handleTouchEnd = (e) => {
-      const touchEndY = e.changedTouches[0].clientY;
-      const deltaY = touchStartY - touchEndY;
+      const touchStartY = e.touches[0].clientY;
       
-      if (Math.abs(deltaY) > 50 && !scrollCooldown.current) {
-        e.preventDefault();
-        scrollCooldown.current = true;
+      const handleTouchEnd = (e) => {
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchStartY - touchEndY;
         
-        if (deltaY > 0) {
-          // Swipe up - next slide
-          setScrollDirection('up');
-          setActiveSlide((prev) => (prev + 1) % totalSlides);
-        } else {
-          // Swipe down - previous slide
-          setScrollDirection('down');
-          setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+        if (Math.abs(deltaY) > 50 && !isScrolling) {
+          setIsScrolling(true);
+          
+          if (deltaY > 0) {
+            // Swipe up - next slide
+            setActiveSlide((prev) => (prev + 1) % totalSlides);
+          } else {
+            // Swipe down - previous slide
+            setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+          }
+          
+          setProgress(0);
+          
+          setTimeout(() => {
+            setIsScrolling(false);
+          }, 800);
         }
-        
-        setProgress(0);
-        
-        setTimeout(() => {
-          scrollCooldown.current = false;
-          setScrollDirection(null);
-        }, 800);
-      }
+      };
+      
+      window.addEventListener('touchend', handleTouchEnd, { once: true });
     };
 
     const container = containerRef.current;
     if (container) {
-      // Add passive: false to ensure we can preventDefault
       container.addEventListener('wheel', handleWheel, { passive: false });
-      container.addEventListener('touchstart', handleTouchStart, { passive: true });
-      container.addEventListener('touchmove', handleTouchMove, { passive: false });
-      container.addEventListener('touchend', handleTouchEnd, { passive: false });
-      
-      // Also prevent default browser behavior for arrow keys
-      const handleKeyDown = (e) => {
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-          e.preventDefault();
-        }
-      };
-      
-      container.addEventListener('keydown', handleKeyDown);
+      container.addEventListener('touchstart', handleTouchStart);
     }
 
     return () => {
       if (container) {
         container.removeEventListener('wheel', handleWheel);
         container.removeEventListener('touchstart', handleTouchStart);
-        container.removeEventListener('touchmove', handleTouchMove);
-        container.removeEventListener('touchend', handleTouchEnd);
-        container.removeEventListener('keydown', handleKeyDown);
+      }
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
       }
     };
-  }, [totalSlides, setActiveSlide]);
+  }, [isScrolling, totalSlides, setActiveSlide]);
 
   // Auto-advance progress bar
   useEffect(() => {
@@ -136,46 +106,9 @@ const HeroSlideshow = ({ destinations, activeSlide, setActiveSlide }) => {
     setProgress(0);
   };
 
-  // Add keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'ArrowDown' || e.key === ' ') {
-        e.preventDefault();
-        setActiveSlide((prev) => (prev + 1) % totalSlides);
-        setProgress(0);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
-        setProgress(0);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveSlide, totalSlides]);
-
   return (
-    <section 
-      className="wellness-slideshow" 
-      ref={containerRef}
-      style={{ height: '100vh', overflow: 'hidden' }}
-    >
+    <section className="wellness-slideshow" ref={containerRef}>
       <div className="overlay-gradient"></div>
-      
-      {/* Direction indicators */}
-      {scrollDirection && (
-        <div className={`scroll-direction-indicator ${scrollDirection}`}>
-          <div className="indicator-content">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {scrollDirection === 'down' ? (
-                <path d="M12 5V19M12 19L19 12M12 19L5 12" stroke="#D1CCBF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              ) : (
-                <path d="M12 19V5M12 5L5 12M12 5L19 12" stroke="#D1CCBF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              )}
-            </svg>
-          </div>
-        </div>
-      )}
       
       <div className="image-wrapper">
         {destinations.map((dest, index) => (
@@ -289,16 +222,12 @@ const HeroSlideshow = ({ destinations, activeSlide, setActiveSlide }) => {
         </div>
       </div>
 
-      {/* Scroll instruction */}
-      <div className="scroll-instruction">
-        <div className="instruction-text">
-          <span>Scroll to explore</span>
-        </div>
-        <div className="instruction-scroll">
-          <div className="scroll-wheel">
-            <div className="scroll-wheel-line"></div>
-          </div>
-        </div>
+      {/* Scroll indicator */}
+      <div className="scroll-indicator">
+        <span>Scroll to navigate</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fillRule="evenodd" clipRule="evenodd" d="M5.99998 1.33333C5.63179 1.33333 5.33331 1.63181 5.33331 2V8.39052L3.13806 6.19527C2.87771 5.93492 2.45559 5.93492 2.19524 6.19527C1.93489 6.45562 1.93489 6.87774 2.19524 7.13809L5.52857 10.4714C5.78892 10.7318 6.21104 10.7318 6.47139 10.4714L9.80472 7.13809C10.0651 6.87774 10.0651 6.45562 9.80472 6.19527C9.54437 5.93492 9.12225 5.93492 8.8619 6.19527L6.66665 8.39052V2C6.66665 1.63181 6.36817 1.33333 5.99998 1.33333Z" fill="#D1CCBF"/>
+        </svg>
       </div>
     </section>
   );
