@@ -234,7 +234,6 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/Home';
 import Destinations from './components/Destinations';
-// import Wellness from './pages/Wellness';
 import Wellness from './components/Wellness';
 import Innovation from './components/Innovation';
 import Nature from './components/Nature';
@@ -243,7 +242,6 @@ import TheStory from './components/TheStory';
 import ComingSoon from './components/ComingSoon';
 import MainLayout from './components/MainLayout';
 import './styles/global.css';
-
 
 function App() {
   return (
