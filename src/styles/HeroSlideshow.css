@@ -412,3 +412,15 @@ body, html {
     opacity: 0;
   }
 }
+
+/* Add this to your HeroSlideshow.css or HeroSlideshowSidebar.css */
+
+/* Ensure slideshow is always on top of sidebar overlay */
+.wellness-slideshow {
+  z-index: 1;
+}
+
+/* Sidebar overlay should not block events when sidebar is closed */
+.image-detail-sidebar:not(.open) .sidebar-overlay {
+  pointer-events: none;
+}
